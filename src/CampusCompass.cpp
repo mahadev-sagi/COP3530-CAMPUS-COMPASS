@@ -72,6 +72,68 @@ bool CampusCompass::ParseCommand(const string &command) {
     string Command;
     ss>>Command;
     if (Command == "insert") {
+        string name;
+        int studentID, residenceID, numberofClasses;
+        char quote;
+        ss >> quote;
+        getline(ss, name, '"');
+        ss>> studentID>>residenceID>>numberofClasses;
+        if (to_string(studentID).length() != 8) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        if (students.find(studentID) != students.end()) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        for (char c: name) {
+            if (!isalpha(c) && c != ' ') {
+                cout<<"unsuccessful"<<endl;
+                return false;
+            }
+        }
+        if (numberofClasses < 1 || numberofClasses > 6) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        vector<string> classesVector;
+        for (auto i = 0; i < numberofClasses; i++) {
+            string classCode;
+            ss>> classCode;
+            if (classCode.length() != 7) {
+                cout<<"unsuccessful"<<endl;
+                return false;
+            }
+            for (auto j = 0; j < 3; j++) {
+                if (!isupper(classCode[j])) {
+                    cout<<"unsuccessful"<<endl;
+                    return false;
+                }
+            }
+            for (auto j = 3; j < 7; j++) {
+                if (!isdigit(classCode[j])) {
+                    cout<<"unsuccessful"<<endl;
+                    return false;
+                }
+            }
+            if (classes.find(classCode) == classes.end()) {
+                cout<<"unsuccessful"<<endl;
+                return false;
+            }
+            classesVector.push_back(classCode);
+        }
+       Student student;
+        student.name = name;
+        student.id = studentID;
+        student.residenceID = residenceID;
+        for (string& classCode : classesVector) {
+            student.classes.insert(classCode);
+        }
+        students[studentID] = student;
+        cout<<"successful"<<endl;
+        return true;
+
+
 
     }
     else if (Command == "remove") {
@@ -92,8 +154,83 @@ bool CampusCompass::ParseCommand(const string &command) {
         }
 
     }
-    else if (Command =="dropClass"){}
+    else if (Command =="dropClass") {
+        int studentID;
+        string classCode;
+        ss>>studentID>>classCode;
+        if (to_string(studentID).length() != 8) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        if (students.find(studentID) == students.end()) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        if (classes.find(classCode) == classes.end()) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        if (students[studentID].classes.find(classCode) == students[studentID].classes.end()) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        students[studentID].classes.erase(classCode);
+        if (students[studentID].classes.empty()) {
+            students.erase(studentID);
+        }
+        cout<<"successful"<<endl;
+        return true;
+    }
+    else if (Command == "replaceClass") {
+        int studentID;
+        string classCode1, classCode2;
+        ss>>studentID>>classCode1>>classCode2;
+        if (to_string(studentID).length() != 8) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        if (students.find(studentID) == students.end()) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        if (classes.find(classCode2) == classes.end()) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        if (students[studentID].classes.find(classCode1) == students[studentID].classes.end()) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        if (students[studentID].classes.find(classCode2) != students[studentID].classes.end()) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
+        students[studentID].classes.erase(classCode1);
+        students[studentID].classes.insert(classCode2);
+        cout<<"successful"<<endl;
+        return true;
+    }
+    else if (Command == "removeClass") {
+        string classCode;
+        ss >> classCode;
+        int count = 0;
+        for (auto it = students.begin(); it != students.end(); it++) {
+            if (it->second.classes.find(classCode) != it->second.classes.end()) {
+                it->second.classes.erase(classCode);
+                count++;
+                if (it->second.classes.empty()) {
+                    students.erase(it);
+                }else {
+                    it++;
+                }
+            }else {
+                it++;
+            }
+        }
+        cout<<count<<endl;
+        return true;
+    }
 
-    return true;
+
 
 }
