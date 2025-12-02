@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
+#include<sstream>
+
 
 // change if you choose to use a different header name
 #include "CampusCompass.h"
@@ -9,34 +11,102 @@ using namespace std;
 // the syntax for defining a test is below. It is important for the name to be
 // unique, but you can group multiple tests with [tags]. A test can have
 // [multiple][tags] using that syntax.
-TEST_CASE("Example Test Name - Change me!", "[tag]") {
+TEST_CASE("Invalid Commands", "[validation]") {
   // instantiate any class members that you need to test here
-  int one = 1;
+ CampusCompass  c;
+  c.ParseCSV("../data/edges.csv", "../data/classes.csv");
+
+  SECTION("Invalid Student ID - Too Short") {
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("insert \"John\" 123 1 1 COP3530");
+    cout.rdbuf(old);
+    REQUIRE(buffer.str() == "unsuccessful\n");
+  }
+
+  // Test 2: Invalid name with numbers
+  SECTION("Invalid Name - Contains Numbers") {
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("insert \"John123\" 12345678 1 1 COP3530");
+    cout.rdbuf(old);
+    REQUIRE(buffer.str() == "unsuccessful\n");
+  }
+
+  // Test 3: Invalid class code format
+  SECTION("Invalid Class Code Format") {
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("insert \"John\" 12345678 1 1 COP35");
+    cout.rdbuf(old);
+    REQUIRE(buffer.str() == "unsuccessful\n");
+  }
+
+  // Test 4: Too many classes (> 6)
+  SECTION("Too Many Classes") {
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("insert \"John\" 12345678 1 7 COP3530 COP3502 MAC2311 PHY2048 CDA3101 ENC1101 CHM2045");
+    cout.rdbuf(old);
+    REQUIRE(buffer.str() == "unsuccessful\n");
+  }
+
+  // Test 5: Class doesn't exist
+  SECTION("Non-existent Class") {
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("insert \"John\" 12345678 1 1 ABC1234");
+    cout.rdbuf(old);
+    REQUIRE(buffer.str() == "unsuccessful\n");
+  }
+}
 
   // anything that evaluates to false in a REQUIRE block will result in a
   // failing test
-  REQUIRE(one == 0); // fix me!
+ // fix me!
 
   // all REQUIRE blocks must evaluate to true for the whole test to pass
-  REQUIRE(false); // also fix me!
-}
+// also fix me!
 
-TEST_CASE("Test 2", "[tag]") {
+
+
   // you can also use "sections" to share setup code between tests, for example:
-  int one = 1;
-
-  SECTION("num is 2") {
-    int num = one + 1;
-    REQUIRE(num == 2);
-  };
-
-  SECTION("num is 3") {
-    int num = one + 2;
-    REQUIRE(num == 3);
-  };
-
   // each section runs the setup code independently to ensure that they don't
   // affect each other
+
+// Tests 3 different edge cases
+TEST_CASE("Edge Cases", "[edge]") {
+  CampusCompass c;
+  c.ParseCSV("../data/edges.csv", "../data/classes.csv");
+
+  // Edge Case 1: Remove student that doesn't exist
+  SECTION("Remove Non-existent Student") {
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("remove 99999999");
+    cout.rdbuf(old);
+    REQUIRE(buffer.str() == "unsuccessful\n");
+  }
+
+  // Edge Case 2: Drop class from student who doesn't have it
+  SECTION("Drop Class Student Doesn't Have") {
+    c.ParseCommand("insert \"Alice\" 11111111 1 1 COP3530");
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("dropClass 11111111 MAC2311");
+    cout.rdbuf(old);
+    REQUIRE(buffer.str() == "unsuccessful\n");
+  }
+
+  // Edge Case 3: Insert duplicate student ID
+  SECTION("Insert Duplicate Student") {
+    c.ParseCommand("insert \"Bob\" 22222222 1 1 COP3530");
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("insert \"Bob2\" 22222222 1 1 MAC2311");
+    cout.rdbuf(old);
+    REQUIRE(buffer.str() == "unsuccessful\n");
+  }
 }
 
 // You must write 5 unique, meaningful tests for credit on the testing section
@@ -48,28 +118,85 @@ TEST_CASE("Test 2", "[tag]") {
 
 // This uses C++ "raw strings" and assumes your CampusCompass outputs a string with
 //   the same thing you print.
-TEST_CASE("Example CampusCompass Output Test", "[flag]") {
+TEST_CASE("Command testing", "[integrate]") {
   // the following is a "raw string" - you can write the exact input (without
   //   any indentation!) and it should work as expected
   // this is based on the input and output of the first public test case
-  string input = R"(6
-insert "Student A" 10000001 1 1 COP3502
-insert "Student B" 10000002 1 1 COP3502
-insert "Student C" 10000003 1 2 COP3502 MAC2311
-dropClass 10000001 COP3502
-remove 10000001
-removeClass COP3502
-)";
+  CampusCompass c;
+  c.ParseCSV("../data/edges.csv", "../data/classes.csv");
 
-  string expectedOutput = R"(successful
-successful
-successful
-successful
-unsuccessful
-2
-)";
+  stringstream buffer;
+  streambuf* old = cout.rdbuf(buffer.rdbuf());
+// Insert some test cases
+  c.ParseCommand("insert \"Student A\" 10000001 1 1 COP3502");
+  c.ParseCommand("insert \"Student B\" 10000002 1 1 COP3502");
+  c.ParseCommand("insert \"Student C\" 10000003 1 2 COP3502 MAC2311");
+  c.ParseCommand("dropClass 10000001 COP3502");
+  c.ParseCommand("remove 10000001");
+  c.ParseCommand("removeClass COP3502");
 
-  string actualOutput;
+  cout.rdbuf(old);
+
+  string expectedOutput = "successful\nsuccessful\nsuccessful\nsuccessful\nunsuccessful\n2\n";
+  REQUIRE(buffer.str() == expectedOutput);
+}
+
+TEST_CASE("Test isConnected", "[connectivity]") {
+  CampusCompass c;
+  c.ParseCSV("../data/edges.csv", "../data/classes.csv");
+  SECTION("Locations are connected") {
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("isConnected 1 23");
+    cout.rdbuf(old);
+    REQUIRE(buffer.str() == "successful\n");
+  }
+
+  SECTION("Locations not connected after edge closure") {
+    c.ParseCommand("toggleEdgesClosure 3 1 2 1 4 1 50");
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("isConnected 1 23");
+    cout.rdbuf(old);
+    REQUIRE(buffer.str() == "unsuccessful\n");
+  }
+}
+
+TEST_CASE("Drop last class removes student", "[edge-case]") {
+  CampusCompass c;
+  c.ParseCSV("../data/edges.csv", "../data/classes.csv");
+
+  c.ParseCommand("insert \"Solo\" 77777777 1 1 COP3530");
+  c.ParseCommand("dropClass 77777777 COP3530");
+
+  // Try to drop another class - should fail because student is gone
+  stringstream buffer;
+  streambuf* old = cout.rdbuf(buffer.rdbuf());
+  c.ParseCommand("dropClass 77777777 MAC2311");
+  cout.rdbuf(old);
+  REQUIRE(buffer.str() == "unsuccessful\n");
+}
+
+TEST_CASE("Shortest Path ", "[shortest]") {
+  CampusCompass c;
+  c.ParseCSV("../data/edges.csv", "../data/classes.csv");
+
+  // Student A lives at loc 1.
+  // COP3502 is at loc 2 the Direct Edge exists in this scenario
+  c.ParseCommand("insert \"Student A\" 10000001 1 1 COP3502");
+
+  SECTION("Basic Shortest Path") {
+    stringstream buffer;
+    streambuf* old = cout.rdbuf(buffer.rdbuf());
+    c.ParseCommand("printShortestEdges 10000001");
+
+    cout.rdbuf(old);
+    // We expect "Total Time: X" (where X is positive), NOT -1.
+    string output = buffer.str();
+    REQUIRE(output.find("Total Time: -1") == string::npos); // Should NOT be -1
+    REQUIRE(output.find("Name: Student A") != string::npos);
+  }
+}
 
   // somehow pass your input into your CampusCompass and parse it to call the
   // correct functions, for example:
@@ -80,5 +207,4 @@ unsuccessful
   actualOutput = c.getStringRepresentation()
   */
 
-  REQUIRE(actualOutput == expectedOutput);
-}
+
