@@ -214,21 +214,48 @@ bool CampusCompass::ParseCommand(const string &command) {
         string classCode;
         ss >> classCode;
         int count = 0;
-        for (auto it = students.begin(); it != students.end(); it++) {
-            if (it->second.classes.find(classCode) != it->second.classes.end()) {
+        auto it = students.begin();
+        while (it != students.end()) {
+            if (it->second.classes.count(classCode)) {
                 it->second.classes.erase(classCode);
                 count++;
                 if (it->second.classes.empty()) {
-                    students.erase(it);
+                    it = students.erase(it);
                 }else {
                     it++;
                 }
-            }else {
-                it++;
             }
+            cout<<count<<endl;
+            return true;
         }
         cout<<count<<endl;
         return true;
+    }
+    else if (Command == "toggleEdgesClosure") {
+        int n;
+        ss >> n;
+        for (int i = 0; i < n; i ++) {
+            int locationX, locationY;
+            ss>> locationX >> locationY;
+            if (closedEdges.find({locationX, locationY}) != closedEdges.end()) {
+                closedEdges.erase({locationX, locationY});
+                closedEdges.erase({locationY, locationX});
+            }else {
+                closedEdges.insert({locationX, locationY});
+                closedEdges.insert({locationY, locationX});
+            }
+        }
+        cout<<"successful"<<endl;
+        return true;
+    }
+    else if (Command == "checkEdgeStatus") {
+        int id1, id2;
+        ss >> id1 >> id2;
+        bool edgeStatus = false;
+        if (closedEdges.find({id1,id2}) != closedEdges.end() || closedEdges.find({id2,id1}) != closedEdges.end()) {
+            cout<<"unsuccessful"<<endl;
+            return false;
+        }
     }
 
 
